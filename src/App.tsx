@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { generateResponse, getRandomCookingMessage } from './lib/generateResponse';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -138,7 +138,6 @@ export default function App() {
         {screen === 'landing' && (
           <LandingScreen
             fileInputRef={fileInputRef}
-            onFileInput={handleFileInput}
             onDrop={handleDrop}
           />
         )}
@@ -164,7 +163,6 @@ export default function App() {
             onCopy={handleCopy}
             onRegenerate={handleRegenerate}
             onStartOver={handleStartOver}
-            tone={tone}
             getToneLabel={getToneLabel}
           />
         )}
@@ -186,11 +184,9 @@ export default function App() {
 
 function LandingScreen({
   fileInputRef,
-  onFileInput,
   onDrop,
 }: {
   fileInputRef: React.RefObject<HTMLInputElement | null>;
-  onFileInput: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onDrop: (e: React.DragEvent) => void;
 }) {
   return (
@@ -396,14 +392,6 @@ function CustomizeScreen({
 // ─── Cooking Screen (Loading) ────────────────────────────────────────────────
 
 function CookingScreen({ message }: { message: string }) {
-  const [dots, setDots] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setDots((d) => (d + 1) % 4);
-    }, 500);
-    return () => clearInterval(interval);
-  }, []);
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-8 fade-in-up">
@@ -446,7 +434,6 @@ function ResultScreen({
   onCopy,
   onRegenerate,
   onStartOver,
-  tone,
   getToneLabel,
 }: {
   result: string;
@@ -454,7 +441,6 @@ function ResultScreen({
   onCopy: () => void;
   onRegenerate: () => void;
   onStartOver: () => void;
-  tone: number;
   getToneLabel: () => { emoji: string; label: string };
 }) {
   const toneInfo = getToneLabel();
