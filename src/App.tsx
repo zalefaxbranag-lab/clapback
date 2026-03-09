@@ -1,5 +1,4 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { generateResponse } from './lib/generateResponse';
 import { type Lang, t, tArray } from './lib/i18n';
 import {
   getHistory,
@@ -13,7 +12,6 @@ import {
   saveAiConfig,
   clearAiConfig,
   generateWithAI,
-  type Provider,
 } from './lib/ai';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -69,44 +67,34 @@ export default function App() {
   const pickRandom = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
   const handleCook = async () => {
+    const aiConfig = getAiConfig();
+    if (!aiConfig) {
+      setScreen('settings');
+      return;
+    }
+    if (!screenshot) return;
+
     setScreen('cooking');
     const msgs = tArray(lang, 'cookingMessages');
     setCookingMsg(pickRandom(msgs));
     const interval = setInterval(() => setCookingMsg(pickRandom(msgs)), 2000);
 
     try {
-      let response: string;
-      const aiConfig = getAiConfig();
-
-      if (aiConfig && screenshot) {
-        // AI mode: send screenshot to vision API
-        try {
-          response = await generateWithAI({
-            config: aiConfig,
-            screenshotBase64: screenshot,
-            tone,
-            length,
-            lang,
-          });
-        } catch (aiErr) {
-          console.warn('AI failed, falling back to templates:', aiErr);
-          // Show brief error then fallback
-          setCookingMsg(t(lang, 'aiError'));
-          await new Promise((r) => setTimeout(r, 1200));
-          response = await generateResponse({ tone, length, lang });
-        }
-      } else {
-        // Template mode
-        response = await generateResponse({ tone, length, lang });
-      }
-
+      const response = await generateWithAI({
+        config: aiConfig,
+        screenshotBase64: screenshot,
+        tone,
+        length,
+        lang,
+      });
       setResult(response);
       const entry = addToHistory({ text: response, tone, lang });
       setResultId(entry.id);
       setHistory(getHistory());
       setScreen('result');
-    } catch {
-      setResult(lang === 'fr' ? 'bestie les vibes ont crash\u00e9... r\u00e9essaie ?' : 'bestie the vibes broke... try again?');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'erreur';
+      setResult(lang === 'fr' ? `Erreur : ${msg}` : `Error: ${msg}`);
       setScreen('result');
     } finally {
       clearInterval(interval);
@@ -800,14 +788,13 @@ function SettingsScreen({
   onAiModeChange: (v: boolean) => void;
 }) {
   const existing = getAiConfig();
-  const [provider, setProvider] = useState<Provider>(existing?.provider || 'openai');
   const [keyInput, setKeyInput] = useState(existing?.apiKey || '');
   const [saved, setSaved] = useState(false);
   const hasKey = !!existing;
 
   const handleSave = () => {
     if (!keyInput.trim()) return;
-    saveAiConfig({ provider, apiKey: keyInput.trim() });
+    saveAiConfig(keyInput.trim());
     onAiModeChange(true);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -843,41 +830,28 @@ function SettingsScreen({
         }`}>
           <span className={`w-2.5 h-2.5 rounded-full ${hasKey ? 'bg-green-500' : 'bg-white/20'}`} />
           <span className="text-sm font-semibold text-white/70">
-            {hasKey ? `${t(lang, 'aiPowered')} ✨ — ${existing.provider === 'openai' ? 'OpenAI' : 'Claude'}` : t(lang, 'templateMode')}
+            {hasKey
+              ? (lang === 'fr' ? 'Claude Sonnet 4.5 connect\u00e9' : 'Claude Sonnet 4.5 connected')
+              : (lang === 'fr' ? 'Cl\u00e9 API requise' : 'API key required')}
           </span>
-        </div>
-      </div>
-
-      {/* Provider selector */}
-      <div className="w-full max-w-sm mx-auto space-y-2">
-        <label className="text-sm font-semibold text-white/60">{t(lang, 'aiProvider')}</label>
-        <div className="flex gap-2">
-          {(['openai', 'anthropic'] as const).map((p) => (
-            <button
-              key={p}
-              onClick={() => setProvider(p)}
-              className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all active:scale-95 border ${
-                provider === p
-                  ? 'bg-purple-500/20 border-purple-500/50 text-white/90'
-                  : 'bg-white/[0.03] border-white/[0.06] text-white/40 hover:bg-white/[0.06]'
-              }`}
-            >
-              {p === 'openai' ? '🤖 OpenAI' : '🟣 Claude'}
-            </button>
-          ))}
         </div>
       </div>
 
       {/* API key input */}
       <div className="w-full max-w-sm mx-auto space-y-2">
-        <label className="text-sm font-semibold text-white/60">{t(lang, 'apiKey')}</label>
+        <label className="text-sm font-semibold text-white/60">
+          {lang === 'fr' ? 'Cl\u00e9 API Anthropic' : 'Anthropic API key'}
+        </label>
         <input
           type="password"
           value={keyInput}
           onChange={(e) => setKeyInput(e.target.value)}
-          placeholder={t(lang, 'apiKeyPlaceholder')}
-          className="w-full px-4 py-3 rounded-xl bg-white/[0.06] border border-white/[0.1] text-white/90 text-sm placeholder:text-white/25 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 transition-all"
+          placeholder="sk-ant-..."
+          className="w-full px-4 py-3 rounded-xl bg-white/[0.06] border border-white/[0.1] text-white/90 text-sm font-mono placeholder:text-white/25 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 transition-all"
         />
+        <p className="text-[11px] text-white/25 px-1">
+          {lang === 'fr' ? 'console.anthropic.com \u2192 API Keys' : 'console.anthropic.com \u2192 API Keys'}
+        </p>
       </div>
 
       {/* Actions */}
@@ -893,16 +867,41 @@ function SettingsScreen({
                 : 'bg-white/[0.06] text-white/20 cursor-not-allowed'
           }`}
         >
-          {saved ? `✓ ${t(lang, 'apiKeySaved')}` : t(lang, 'saveKey')}
+          {saved ? (lang === 'fr' ? '\u2713 enregistr\u00e9 !' : '\u2713 saved!') : (lang === 'fr' ? 'sauvegarder' : 'save key')}
         </button>
         {hasKey && (
           <button
             onClick={handleRemove}
             className="w-full py-2.5 rounded-xl text-sm font-semibold text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-all"
           >
-            {t(lang, 'removeKey')}
+            {lang === 'fr' ? 'supprimer la cl\u00e9' : 'remove key'}
           </button>
         )}
+      </div>
+
+      {/* How it works */}
+      <div className="w-full max-w-sm mx-auto space-y-2">
+        <p className="text-xs text-white/30 font-medium uppercase tracking-wider">
+          {lang === 'fr' ? 'comment \u00e7a marche' : 'how it works'}
+        </p>
+        <div className="bg-white/[0.03] rounded-xl p-4 border border-white/[0.05] space-y-2">
+          {(lang === 'fr' ? [
+            "L'IA lit ton screenshot de conversation",
+            'Elle comprend le contexte, le sous-texte, le ton',
+            'Elle \u00e9crit une r\u00e9ponse naturelle adapt\u00e9e \u00e0 la situation',
+            'Chaque r\u00e9ponse est unique \u2014 z\u00e9ro template',
+          ] : [
+            'AI reads your conversation screenshot',
+            'It understands context, subtext, and tone',
+            'It writes a natural reply adapted to the situation',
+            'Every reply is unique \u2014 zero templates',
+          ]).map((step, i) => (
+            <div key={i} className="flex items-start gap-2">
+              <span className="text-purple-400 text-xs mt-0.5">{i + 1}.</span>
+              <p className="text-[12px] text-white/50 leading-relaxed">{step}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Privacy note */}
