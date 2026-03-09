@@ -8,10 +8,17 @@ import {
   clearHistory,
   type HistoryEntry,
 } from './lib/storage';
+import {
+  getAiConfig,
+  saveAiConfig,
+  clearAiConfig,
+  generateWithAI,
+  type Provider,
+} from './lib/ai';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type Screen = 'landing' | 'customize' | 'cooking' | 'result' | 'history';
+type Screen = 'landing' | 'customize' | 'cooking' | 'result' | 'history' | 'settings';
 
 // ─── App ─────────────────────────────────────────────────────────────────────
 
@@ -30,6 +37,7 @@ export default function App() {
     return navigator.language.startsWith('fr') ? 'fr' : 'en';
   });
   const [history, setHistory] = useState<HistoryEntry[]>(getHistory);
+  const [aiMode, setAiMode] = useState(() => !!getAiConfig());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Persist language choice
@@ -67,7 +75,31 @@ export default function App() {
     const interval = setInterval(() => setCookingMsg(pickRandom(msgs)), 2000);
 
     try {
-      const response = await generateResponse({ tone, length, lang });
+      let response: string;
+      const aiConfig = getAiConfig();
+
+      if (aiConfig && screenshot) {
+        // AI mode: send screenshot to vision API
+        try {
+          response = await generateWithAI({
+            config: aiConfig,
+            screenshotBase64: screenshot,
+            tone,
+            length,
+            lang,
+          });
+        } catch (aiErr) {
+          console.warn('AI failed, falling back to templates:', aiErr);
+          // Show brief error then fallback
+          setCookingMsg(t(lang, 'aiError'));
+          await new Promise((r) => setTimeout(r, 1200));
+          response = await generateResponse({ tone, length, lang });
+        }
+      } else {
+        // Template mode
+        response = await generateResponse({ tone, length, lang });
+      }
+
       setResult(response);
       const entry = addToHistory({ text: response, tone, lang });
       setResultId(entry.id);
@@ -179,6 +211,7 @@ export default function App() {
             getToneLabel={getToneLabel}
             getLengthLabel={getLengthLabel}
             onCook={handleCook}
+            aiMode={aiMode}
           />
         )}
         {screen === 'cooking' && <CookingScreen message={cookingMsg} />}
@@ -202,15 +235,21 @@ export default function App() {
             onClear={handleClearHistory}
           />
         )}
+        {screen === 'settings' && (
+          <SettingsScreen
+            lang={lang}
+            onAiModeChange={setAiMode}
+          />
+        )}
       </main>
 
       {/* Bottom nav */}
       <nav className="fixed bottom-0 left-0 right-0 bg-[#0a0a0f]/90 backdrop-blur-xl border-t border-white/[0.06] pb-[env(safe-area-inset-bottom)]">
         <div className="flex max-w-md mx-auto">
           <button
-            onClick={() => screen === 'history' ? handleStartOver() : undefined}
+            onClick={() => (screen === 'history' || screen === 'settings') ? handleStartOver() : undefined}
             className={`flex-1 flex flex-col items-center gap-0.5 py-3 transition-colors ${
-              screen !== 'history' ? 'text-purple-400' : 'text-white/30 hover:text-white/50'
+              screen !== 'history' && screen !== 'settings' ? 'text-purple-400' : 'text-white/30 hover:text-white/50'
             }`}
           >
             <span className="text-lg">⚡</span>
@@ -226,6 +265,18 @@ export default function App() {
             <span className="text-[10px] font-semibold">{t(lang, 'navHistory')}</span>
             {history.length > 0 && (
               <span className="absolute top-2 right-1/4 w-2 h-2 bg-pink-500 rounded-full" />
+            )}
+          </button>
+          <button
+            onClick={() => setScreen('settings')}
+            className={`flex-1 flex flex-col items-center gap-0.5 py-3 transition-colors relative ${
+              screen === 'settings' ? 'text-purple-400' : 'text-white/30 hover:text-white/50'
+            }`}
+          >
+            <span className="text-lg">⚙️</span>
+            <span className="text-[10px] font-semibold">{t(lang, 'navSettings')}</span>
+            {aiMode && (
+              <span className="absolute top-2 right-1/4 w-2 h-2 bg-green-500 rounded-full" />
             )}
           </button>
         </div>
@@ -363,6 +414,7 @@ function CustomizeScreen({
   getToneLabel,
   getLengthLabel,
   onCook,
+  aiMode,
 }: {
   lang: Lang;
   screenshot: string | null;
@@ -373,6 +425,7 @@ function CustomizeScreen({
   getToneLabel: () => { emoji: string; label: string };
   getLengthLabel: () => string;
   onCook: () => void;
+  aiMode: boolean;
 }) {
   const toneInfo = getToneLabel();
 
@@ -451,11 +504,18 @@ function CustomizeScreen({
       <div className="w-full max-w-sm mx-auto mt-auto pt-3 fade-in-up-delay-3">
         <button
           onClick={onCook}
-          className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500 font-bold text-lg shadow-xl shadow-purple-500/25 hover:shadow-purple-500/40 active:scale-[0.97] transition-all"
+          className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500 font-bold text-lg shadow-xl shadow-purple-500/25 hover:shadow-purple-500/40 active:scale-[0.97] transition-all relative"
         >
           {t(lang, 'cookReply')} 🔥
+          {aiMode && (
+            <span className="absolute top-2 right-3 text-[10px] bg-green-500/90 text-white px-2 py-0.5 rounded-full font-bold">
+              {t(lang, 'aiPowered')}
+            </span>
+          )}
         </button>
-        <p className="text-[10px] text-white/20 text-center mt-2.5">{t(lang, 'noDataLeaves')}</p>
+        <p className="text-[10px] text-white/20 text-center mt-2.5">
+          {aiMode ? (t(lang, 'aiPowered') + ' ✨ — ') : ''}{t(lang, 'noDataLeaves')}
+        </p>
       </div>
     </div>
   );
@@ -726,6 +786,133 @@ function HistoryScreen({
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Settings Screen ─────────────────────────────────────────────────────────
+
+function SettingsScreen({
+  lang,
+  onAiModeChange,
+}: {
+  lang: Lang;
+  onAiModeChange: (v: boolean) => void;
+}) {
+  const existing = getAiConfig();
+  const [provider, setProvider] = useState<Provider>(existing?.provider || 'openai');
+  const [keyInput, setKeyInput] = useState(existing?.apiKey || '');
+  const [saved, setSaved] = useState(false);
+  const hasKey = !!existing;
+
+  const handleSave = () => {
+    if (!keyInput.trim()) return;
+    saveAiConfig({ provider, apiKey: keyInput.trim() });
+    onAiModeChange(true);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleRemove = () => {
+    clearAiConfig();
+    setKeyInput('');
+    onAiModeChange(false);
+  };
+
+  return (
+    <div className="flex-1 flex flex-col gap-5 fade-in-up">
+      <div className="pt-2">
+        <h2 className="text-xl font-black text-white/90 flex items-center gap-2">
+          ⚙️ {t(lang, 'settingsTitle')}
+        </h2>
+      </div>
+
+      {/* Info card */}
+      <div className="w-full max-w-sm mx-auto">
+        <div className="bg-purple-500/10 rounded-2xl p-4 border border-purple-500/20">
+          <p className="text-sm text-white/60 leading-relaxed">
+            {t(lang, 'noKeyInfo')}
+          </p>
+        </div>
+      </div>
+
+      {/* Status badge */}
+      <div className="w-full max-w-sm mx-auto">
+        <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl ${
+          hasKey ? 'bg-green-500/10 border border-green-500/20' : 'bg-white/[0.04] border border-white/[0.06]'
+        }`}>
+          <span className={`w-2.5 h-2.5 rounded-full ${hasKey ? 'bg-green-500' : 'bg-white/20'}`} />
+          <span className="text-sm font-semibold text-white/70">
+            {hasKey ? `${t(lang, 'aiPowered')} ✨ — ${existing.provider === 'openai' ? 'OpenAI' : 'Claude'}` : t(lang, 'templateMode')}
+          </span>
+        </div>
+      </div>
+
+      {/* Provider selector */}
+      <div className="w-full max-w-sm mx-auto space-y-2">
+        <label className="text-sm font-semibold text-white/60">{t(lang, 'aiProvider')}</label>
+        <div className="flex gap-2">
+          {(['openai', 'anthropic'] as const).map((p) => (
+            <button
+              key={p}
+              onClick={() => setProvider(p)}
+              className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all active:scale-95 border ${
+                provider === p
+                  ? 'bg-purple-500/20 border-purple-500/50 text-white/90'
+                  : 'bg-white/[0.03] border-white/[0.06] text-white/40 hover:bg-white/[0.06]'
+              }`}
+            >
+              {p === 'openai' ? '🤖 OpenAI' : '🟣 Claude'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* API key input */}
+      <div className="w-full max-w-sm mx-auto space-y-2">
+        <label className="text-sm font-semibold text-white/60">{t(lang, 'apiKey')}</label>
+        <input
+          type="password"
+          value={keyInput}
+          onChange={(e) => setKeyInput(e.target.value)}
+          placeholder={t(lang, 'apiKeyPlaceholder')}
+          className="w-full px-4 py-3 rounded-xl bg-white/[0.06] border border-white/[0.1] text-white/90 text-sm placeholder:text-white/25 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 transition-all"
+        />
+      </div>
+
+      {/* Actions */}
+      <div className="w-full max-w-sm mx-auto space-y-2">
+        <button
+          onClick={handleSave}
+          disabled={!keyInput.trim()}
+          className={`w-full py-3 rounded-xl font-bold text-sm transition-all active:scale-[0.97] ${
+            saved
+              ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+              : keyInput.trim()
+                ? 'bg-gradient-to-r from-purple-500 to-pink-500 shadow-lg shadow-purple-500/20'
+                : 'bg-white/[0.06] text-white/20 cursor-not-allowed'
+          }`}
+        >
+          {saved ? `✓ ${t(lang, 'apiKeySaved')}` : t(lang, 'saveKey')}
+        </button>
+        {hasKey && (
+          <button
+            onClick={handleRemove}
+            className="w-full py-2.5 rounded-xl text-sm font-semibold text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-all"
+          >
+            {t(lang, 'removeKey')}
+          </button>
+        )}
+      </div>
+
+      {/* Privacy note */}
+      <div className="w-full max-w-sm mx-auto mt-auto pt-3">
+        <div className="bg-white/[0.03] rounded-xl p-3 border border-white/[0.05]">
+          <p className="text-[11px] text-white/30 text-center leading-relaxed">
+            🔒 {t(lang, 'settingsInfo')}
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

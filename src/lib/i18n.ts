@@ -2,7 +2,6 @@ export type Lang = 'en' | 'fr';
 
 const translations = {
   en: {
-    // Header
     appName: 'ClapBack',
     startOver: 'start over',
 
@@ -55,6 +54,8 @@ const translations = {
       'ok wait this is gonna be good...',
       'loading slay.exe...',
       'calibrating the sass levels...',
+      'AI is reading the toxicity levels...',
+      'your reply is being manifested...',
     ],
 
     // Result
@@ -65,7 +66,7 @@ const translations = {
     cookAgain: 'cook again',
     newChat: 'new chat',
     proTip: 'pro tip:',
-    proTipText: "setting boundaries isn't toxic — it's self-respect. you deserve healthy communication",
+    proTipText: "setting boundaries isn't toxic \u2014 it's self-respect. you deserve healthy communication",
 
     // Reactions
     reactionSlay: 'slay',
@@ -83,96 +84,135 @@ const translations = {
     // Nav
     navHome: 'home',
     navHistory: 'receipts',
+    navSettings: 'settings',
 
     // Language
     langToggle: 'FR',
+
+    // Settings
+    settingsTitle: 'settings',
+    aiProvider: 'AI provider',
+    apiKey: 'API key',
+    apiKeyPlaceholder: 'paste your API key here',
+    apiKeySaved: 'saved!',
+    saveKey: 'save key',
+    removeKey: 'remove key',
+    settingsInfo: 'your key is stored locally and sent directly to the AI provider. we never see it.',
+    noKeyInfo: 'without a key, ClapBack uses pre-written templates. with a key, AI reads your screenshot and writes a custom reply.',
+    providerOpenAI: 'OpenAI',
+    providerAnthropic: 'Claude',
+    aiPowered: 'AI',
+    templateMode: 'templates',
+
+    // Errors
+    aiError: 'AI had a moment... trying templates instead',
   },
 
   fr: {
-    // Header
     appName: 'ClapBack',
     startOver: 'recommencer',
 
     // Landing
-    tagline: 'ta bestie IA pour crafter des',
-    taglineHighlight: "r\u00e9ponses de queen",
-    uploadCta: 'drop ton screenshot bestie',
-    uploadSub: 'tape pour upload ou glisse',
+    tagline: 'ta bestie IA pour des',
+    taglineHighlight: "r\u00e9ponses de boss",
+    uploadCta: 'balance ton screen bestie',
+    uploadSub: 'appuie pour upload ou glisse-d\u00e9pose',
     howItWorks: 'comment \u00e7a marche',
-    step1: 'screenshot le chat',
-    step2: 'choisis la vibe',
-    step3: 'r\u00e9cup ta r\u00e9ponse',
-    privacy: 'tes screenshots restent sur ton t\u00e9l. toujours.',
+    step1: 'screen la convo',
+    step2: 'choisis ta vibe',
+    step3: 'chope ta r\u00e9ponse',
+    privacy: 'tes screens restent sur ton tel. point final.',
 
     // Customize
-    evidence: 'la preuve',
+    evidence: 'la pi\u00e8ce \u00e0 conviction',
     vibeCheck: 'vibe check',
     replyLength: 'longueur',
-    gentleBestie: 'bestie douce',
+    gentleBestie: 'mode doux',
     mainCharacter: 'perso principal',
-    shortSweet: 'court & mignon',
+    shortSweet: 'court & pr\u00e9cis',
     fullSend: 'full envoi',
-    cookReply: 'cuisine ma r\u00e9ponse',
-    noDataLeaves: 'aucune donn\u00e9e ne quitte ton t\u00e9l',
+    cookReply: 'go cuisine',
+    noDataLeaves: 'rien ne quitte ton t\u00e9l\u00e9phone',
 
     // Tone labels
-    toneGentle: 'bestie douce',
-    toneReal: 'on garde le real',
-    toneAssertive: 'queen assertive',
+    toneGentle: 'mode doux',
+    toneReal: 'on reste real',
+    toneAssertive: 'queen mode',
     toneMainChar: 'perso principal',
 
     // Length labels
-    lenShort: 'court & mignon',
-    lenMedium: 'parfait',
+    lenShort: 'court & pr\u00e9cis',
+    lenMedium: 'nickel',
     lenFull: 'full envoi',
 
     // Vibe presets
-    presetGentle: 'douce',
+    presetGentle: 'doux',
     presetReal: 'real',
-    presetAssertive: 'assertive',
-    presetMainChar: 'queen',
+    presetAssertive: 'queen',
+    presetMainChar: 'boss',
 
     // Cooking
     cookingMessages: [
-      'bestie analyse le drama...',
-      'lecture entre les lignes rn...',
-      'on canalise le main character energy...',
+      'bestie analyse le drama l\u00e0...',
+      'on d\u00e9crypte les messages...',
+      'canalisation du main character energy...',
       'on craft le clapback parfait...',
-      'cette r\u00e9ponse va \u00eatre ouf...',
-      'ok attends \u00e7a va \u00eatre bon...',
-      'chargement slay.exe...',
+      'cette r\u00e9ponse va tout casser...',
+      'ok attends \u00e7a va \u00eatre une tuerie...',
+      'chargement de slay.exe...',
       'calibrage du niveau sass...',
+      "l'IA lit les red flags...",
+      'ta r\u00e9ponse est en train de se manifester...',
     ],
 
     // Result
-    resultHeader: 'ok \u00e7a mange un peu',
+    resultHeader: '\u00e7a c\'est du lourd',
     modeLabel: 'mode',
-    copyReply: 'copier la r\u00e9ponse',
-    copiedMsg: 'copi\u00e9! maintenant envoie',
+    copyReply: 'copier',
+    copiedMsg: 'copi\u00e9 ! envoie \u00e7a',
     cookAgain: 'recuisiner',
-    newChat: 'nouveau chat',
-    proTip: 'conseil:',
-    proTipText: "poser des limites c'est pas toxique — c'est du respect de soi. tu m\u00e9rites une communication saine",
+    newChat: 'nouvelle convo',
+    proTip: 'rappel :',
+    proTipText: "poser ses limites c'est pas \u00eatre toxique \u2014 c'est du respect de soi. tu m\u00e9rites mieux",
 
     // Reactions
     reactionSlay: 'slay',
-    reactionAte: 'a mang\u00e9',
-    reactionMid: 'mid',
+    reactionAte: 'a g\u00e9r\u00e9',
+    reactionMid: 'bof',
     reactionFire: 'feu',
 
     // History
-    history: 're\u00e7us',
-    noHistory: 'pas encore de re\u00e7us bestie',
+    history: 'historique',
+    noHistory: 'rien ici pour le moment bestie',
     noHistorySub: 'cuisine ta premi\u00e8re r\u00e9ponse pour la voir ici',
-    clearHistory: 'tout effacer',
-    clearConfirm: 'effac\u00e9!',
+    clearHistory: 'tout vider',
+    clearConfirm: 'vid\u00e9 !',
 
     // Nav
     navHome: 'accueil',
-    navHistory: 're\u00e7us',
+    navHistory: 'historique',
+    navSettings: 'r\u00e9glages',
 
     // Language
     langToggle: 'EN',
+
+    // Settings
+    settingsTitle: 'r\u00e9glages',
+    aiProvider: 'fournisseur IA',
+    apiKey: 'cl\u00e9 API',
+    apiKeyPlaceholder: 'colle ta cl\u00e9 API ici',
+    apiKeySaved: 'enregistr\u00e9 !',
+    saveKey: 'sauvegarder',
+    removeKey: 'supprimer la cl\u00e9',
+    settingsInfo: 'ta cl\u00e9 est stock\u00e9e localement et envoy\u00e9e directement au fournisseur IA. on la voit jamais.',
+    noKeyInfo: "sans cl\u00e9, ClapBack utilise des r\u00e9ponses pr\u00e9-\u00e9crites. avec une cl\u00e9, l'IA lit ton screen et \u00e9crit une r\u00e9ponse sur mesure.",
+    providerOpenAI: 'OpenAI',
+    providerAnthropic: 'Claude',
+    aiPowered: 'IA',
+    templateMode: 'mod\u00e8les',
+
+    // Errors
+    aiError: "l'IA a bug\u00e9... on passe aux mod\u00e8les",
   },
 } as const;
 
